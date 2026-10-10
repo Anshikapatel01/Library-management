@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Library Management System</title>
+<link href="https://fonts.googleapis.com/css2?family=Literata:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f2f5f3;--card:#fff;--ink:#1b2a2f;--muted:#5d6f74;--line:#d8e0dc;--acc:#1f6f6b;--acct:#fff;--ok:#1f7a4d;--okb:#dcf2e6;--warn:#b7791f;--warnb:#fbefd5;--bad:#c0392b;--badb:#fbe1de}
+@media(prefers-color-scheme:dark){:root{--bg:#10191c;--card:#18262a;--ink:#e6efed;--muted:#92a8ad;--line:#2b3d42;--acc:#4fc3bb;--acct:#08201e;--ok:#5fd59a;--okb:#14382a;--warn:#f0b955;--warnb:#3b2f12;--bad:#ff8d80;--badb:#3e1d1a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.45}
+main{max-width:860px;margin:0 auto;padding:24px 16px 60px}
+h1{font-family:Literata,Georgia,serif;font-size:1.9rem;margin:0}
+.sub{color:var(--muted);margin:2px 0 18px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.stats div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+.stats b{display:block;font-family:Literata,Georgia,serif;font-size:1.6rem}
+.stats span{font-size:.8rem;color:var(--muted)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+#q{flex:1;min-width:150px}
+button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:9px 14px;cursor:pointer;background:var(--acc);color:var(--acct)}
+button.g{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.d{background:transparent;color:var(--bad);border:1px solid var(--line)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.book{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px;display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap}
+.book h3{margin:0;font-family:Literata,Georgia,serif;font-size:1.05rem}
+.meta{color:var(--muted);font-size:.88rem}
+.tag{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.8rem;font-weight:600;margin-top:6px}
+.t-ok{background:var(--okb);color:var(--ok)}.t-is{background:var(--warnb);color:var(--warn)}.t-od{background:var(--badb);color:var(--bad)}
+.acts{display:flex;gap:8px;align-items:flex-start}
+h2{font-family:Literata,Georgia,serif;font-size:1.2rem;margin:26px 0 10px;display:flex;justify-content:space-between;align-items:center}
+.hist{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px 14px}
+.hist div{padding:9px 0;border-bottom:1px solid var(--line);font-size:.92rem;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.hist div:last-child{border:0}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);width:min(420px,92vw);padding:18px}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog label{display:block;font-size:.88rem;color:var(--muted);margin:10px 0 4px}
+dialog input,dialog select{width:100%}
+.empty{text-align:center;color:var(--muted);padding:28px}
+@media(max-width:560px){.stats{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Library Management System</h1>
+  <p class="sub">Add books, issue and return them, and track overdue fines. Data is saved in this browser.</p>
+
+  <div class="stats">
+    <div><b id="sT">0</b><span>Total books</span></div>
+    <div><b id="sA">0</b><span>Available</span></div>
+    <div><b id="sI">0</b><span>Issued</span></div>
+    <div><b id="sO">0</b><span>Overdue</span></div>
+  </div>
+
+  <div class="bar">
+    <input id="q" type="search" placeholder="Search title or author" aria-label="Search books">
+    <select id="fs" aria-label="Filter by status"><option value="">All status</option><option value="a">Available</option><option value="i">Issued</option><option value="o">Overdue</option></select>
+    <select id="fc" aria-label="Filter by category"><option value="">All categories</option></select>
+    <button id="addBtn">Add book</button>
+  </div>
+
+  <div id="list"></div>
+
+  <h2>Issue history <button class="g" id="csv">Export CSV</button></h2>
+  <div class="hist" id="hist"></div>
+</main>
+
+<dialog id="dBook">
+  <h3 style="margin:0">Add a book</h3>
+  <label for="bt">Title</label><input id="bt">
+  <label for="ba">Author</label><input id="ba">
+  <label for="bc">Category</label><input id="bc" list="cats" placeholder="e.g. Computer Science">
+  <datalist id="cats"></datalist>
+  <p id="bErr" class="meta" style="color:var(--bad);min-height:1.2em"></p>
+  <div class="bar" style="margin:0;justify-content:flex-end"><button class="g" data-close>Cancel</button><button id="saveBook">Save book</button></div>
+</dialog>
+
+<dialog id="dIssue">
+  <h3 style="margin:0">Issue book</h3>
+  <p class="meta" id="iTitle"></p>
+  <label for="im">Member name</label><input id="im">
+  <label for="id">Loan period</label>
+  <select id="id"><option value="7">7 days</option><option value="14" selected>14 days</option><option value="21">21 days</option></select>
+  <p id="iErr" class="meta" style="color:var(--bad);min-height:1.2em"></p>
+  <div class="bar" style="margin:0;justify-content:flex-end"><button class="g" data-close>Cancel</button><button id="saveIssue">Issue</button></div>
+</dialog>
+
+<script>
+var FINE=2, DAY=86400000, KEY="lms-v1", S={books:[],hist:[]}, issuing=null;
+var $=function(i){return document.getElementById(i)};
+function load(){try{var r=localStorage.getItem(KEY);if(r)S=JSON.parse(r)}catch(e){}
+  if(!S.books.length&&!S.hist.length&&!localStorage.getItem(KEY+"-seeded")){
+    S.books=[["Introduction to Algorithms","Cormen","Computer Science"],["Artificial Intelligence: A Modern Approach","Russell & Norvig","AI & ML"],["Hands-On Machine Learning","Aurelien Geron","AI & ML"],["Clean Code","Robert Martin","Computer Science"],["Wings of Fire","A.P.J. Abdul Kalam","Biography"],["Discrete Mathematics","Kenneth Rosen","Mathematics"]].map(function(b,i){return {id:Date.now()+i,title:b[0],author:b[1],cat:b[2],to:null,on:null,due:null}});
+    try{localStorage.setItem(KEY+"-seeded","1")}catch(e){} save()}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function fmt(t){return new Date(t).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}
+function late(b){return b.due&&Date.now()>b.due?Math.ceil((Date.now()-b.due)/DAY):0}
+function status(b){return !b.to?"a":late(b)?"o":"i"}
+function render(){
+  var q=$("q").value.toLowerCase(),fs=$("fs").value,fc=$("fc").value;
+  var cats=[...new Set(S.books.map(function(b){return b.cat}))].sort();
+  $("fc").innerHTML='<option value="">All categories</option>'+cats.map(function(c){return '<option'+(c===fc?' selected':'')+'>'+esc(c)+'</option>'}).join("");
+  $("cats").innerHTML=cats.map(function(c){return '<option value="'+esc(c)+'">'}).join("");
+  var L=S.books.filter(function(b){return (!q||(b.title+" "+b.author).toLowerCase().includes(q))&&(!fs||status(b)===fs)&&(!fc||b.cat===fc)});
+  $("list").innerHTML=L.length?L.map(function(b){var s=status(b),tag=s==="a"?'<span class="tag t-ok">Available</span>':s==="i"?'<span class="tag t-is">Issued to '+esc(b.to)+', due '+fmt(b.due)+'</span>':'<span class="tag t-od">Overdue '+late(b)+' days, fine ₹'+late(b)*FINE+' ('+esc(b.to)+')</span>';
+    return '<div class="book"><div><h3>'+esc(b.title)+'</h3><div class="meta">'+esc(b.author)+' · '+esc(b.cat)+'</div>'+tag+'</div><div class="acts">'+(s==="a"?'<button data-issue="'+b.id+'">Issue</button>':'<button data-ret="'+b.id+'">Return</button>')+'<button class="d" data-del="'+b.id+'">Delete</button></div></div>'}).join(""):'<div class="empty">No books match. Try a different search or add a new book.</div>';
+  $("sT").textContent=S.books.length;
+  $("sA").textContent=S.books.filter(function(b){return !b.to}).length;
+  $("sI").textContent=S.books.filter(function(b){return b.to}).length;
+  $("sO").textContent=S.books.filter(function(b){return late(b)}).length;
+  $("hist").innerHTML=S.hist.length?S.hist.slice().reverse().slice(0,30).map(function(h){return '<div><span><b>'+esc(h.title)+'</b> · '+esc(h.member)+'</span><span class="meta">'+fmt(h.issued)+' to '+fmt(h.returned)+(h.fine?' · fine ₹'+h.fine:'')+'</span></div>'}).join(""):'<div class="meta" style="padding:12px 0">No returns yet.</div>';
+}
+document.addEventListener("click",function(e){
+  var t=e.target;
+  if(t.dataset.close!==undefined)t.closest("dialog").close();
+  if(t.dataset.issue){issuing=S.books.find(function(b){return b.id==t.dataset.issue});$("iTitle").textContent=issuing.title;$("im").value="";$("iErr").textContent="";$("dIssue").showModal()}
+  if(t.dataset.ret){var b=S.books.find(function(x){return x.id==t.dataset.ret}),f=late(b)*FINE;
+    S.hist.push({title:b.title,member:b.to,issued:b.on,returned:Date.now(),fine:f});b.to=b.on=b.due=null;save();render();
+    if(f)alert("Book returned. Please collect a fine of ₹"+f+".")}
+  if(t.dataset.del&&confirm("Delete this book permanently?")){S.books=S.books.filter(function(b){return b.id!=t.dataset.del});save();render()}
+});
+$("addBtn").onclick=function(){["bt","ba","bc"].forEach(function(i){$(i).value=""});$("bErr").textContent="";$("dBook").showModal()};
+$("saveBook").onclick=function(){var t=$("bt").value.trim(),a=$("ba").value.trim(),c=$("bc").value.trim()||"General";
+  if(!t||!a){$("bErr").textContent="Title and author are required.";return}
+  S.books.unshift({id:Date.now(),title:t,author:a,cat:c,to:null,on:null,due:null});save();render();$("dBook").close()};
+$("saveIssue").onclick=function(){var m=$("im").value.trim();
+  if(!m){$("iErr").textContent="Enter the member name.";return}
+  issuing.to=m;issuing.on=Date.now();issuing.due=Date.now()+Number($("id").value)*DAY;save();render();$("dIssue").close()};
+$("csv").onclick=function(){var r=[["Title","Member","Issued","Returned","Fine"]].concat(S.hist.map(function(h){return [h.title,h.member,fmt(h.issued),fmt(h.returned),h.fine]}));
+  var blob=new Blob([r.map(function(x){return x.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"'}).join(",")}).join("\n")],{type:"text/csv"});
+  var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="library-history.csv";a.click()};
+["q","fs","fc"].forEach(function(i){$(i).addEventListener("input",render)});
+load();render();
+</script>
+</body>
+</html>
